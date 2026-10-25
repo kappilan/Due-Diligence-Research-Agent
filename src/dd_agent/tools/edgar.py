@@ -1,12 +1,15 @@
 import threading
 import time
+from typing import Self
 
 import httpx
 from pydantic import BaseModel
 
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
-COMPANY_PAGE_URL = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik}"
+COMPANY_PAGE_URL = (
+    "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik}"
+)
 
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 
@@ -77,7 +80,9 @@ class EdgarClient:
                     raise EdgarError(f"HTTP {response.status_code} for {url}")
                 last_error = EdgarError(f"HTTP {response.status_code} for {url}")
             time.sleep(2**attempt)  # exponential backoff: 2s, 4s, 8s
-        raise EdgarError(f"Failed after {self._max_retries} attempts: {url}") from last_error
+        raise EdgarError(
+            f"Failed after {self._max_retries} attempts: {url}"
+        ) from last_error
 
     # ---------- Public tool functions ----------
 
@@ -86,7 +91,9 @@ class EdgarClient:
         if self._tickers is None:
             raw = self._get_json(TICKERS_URL)
             self._tickers = [
-                CompanyMatch(cik=row["cik_str"], ticker=row["ticker"], name=row["title"])
+                CompanyMatch(
+                    cik=row["cik_str"], ticker=row["ticker"], name=row["title"]
+                )
                 for row in raw.values()
             ]
         q = query.strip().lower()
@@ -110,7 +117,9 @@ class EdgarClient:
                 city=biz.get("city"),
                 state_or_country=biz.get("stateOrCountry"),
                 zip_code=biz.get("zipCode"),
-            ) if biz else None,
+            )
+            if biz
+            else None,
             former_names=[f["name"] for f in data.get("formerNames", [])],
             source_url=COMPANY_PAGE_URL.format(cik=cik),
         )
@@ -118,7 +127,7 @@ class EdgarClient:
     def close(self) -> None:
         self._http.close()
 
-    def __enter__(self) -> "EdgarClient":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc) -> None:
